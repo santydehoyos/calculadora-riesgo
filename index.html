@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Calculadora de riesgo</title>
+<meta name="theme-color" content="#141918">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Riesgo">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+
+<style>
+:root{--bg:#f4f6f3;--sf:#fff;--tx:#1b2220;--mu:#5d6865;--ln:#dde2dd;--ac:#1f6f64;--ok:#1d7a47;--okb:#e4f2e9;--wa:#85570a;--wab:#faefd6;--ba:#b0302a;--bab:#fae5e3;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141918;--sf:#1d2423;--tx:#e8eeea;--mu:#9aa8a3;--ln:#2e3836;--ac:#5cc0ae;--ok:#6fd49a;--okb:#18301f;--wa:#e5b24d;--wab:#33290f;--ba:#ff8d86;--bab:#38191a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141918;--sf:#1d2423;--tx:#e8eeea;--mu:#9aa8a3;--ln:#2e3836;--ac:#5cc0ae;--ok:#6fd49a;--okb:#18301f;--wa:#e5b24d;--wab:#33290f;--ba:#ff8d86;--bab:#38191a;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:480px;margin:0 auto;padding:20px 16px 40px}
+h1{font-size:22px;margin:0 0 4px;letter-spacing:-.01em}
+.sub{color:var(--mu);font-size:14px;margin:0 0 18px}
+.seg{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--ln);border-radius:10px;overflow:hidden;margin-bottom:14px}
+.seg button{padding:11px;border:0;background:var(--sf);color:var(--mu);font:inherit;font-weight:600;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ac);color:var(--bg)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+label{display:block;font-size:13px;color:var(--mu);margin-bottom:4px}
+input{width:100%;padding:11px 12px;border:1px solid var(--ln);border-radius:8px;background:var(--sf);color:var(--tx);font:inherit;font-variant-numeric:tabular-nums}
+input:focus-visible,.seg button:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+.hint{font-size:12px;color:var(--mu);margin:4px 0 0}
+.full{grid-column:1/-1}
+#out{margin-top:22px}
+.verdict{border-left:6px solid;border-radius:10px;padding:14px 16px;margin-bottom:12px}
+.verdict h2{margin:0;font-size:20px}
+.verdict p{margin:4px 0 0;font-size:14px}
+.v-ok{border-color:var(--ok);background:var(--okb)}.v-ok h2{color:var(--ok)}
+.v-warn{border-color:var(--wa);background:var(--wab)}.v-warn h2{color:var(--wa)}
+.v-bad{border-color:var(--ba);background:var(--bab)}.v-bad h2{color:var(--ba)}
+ul{list-style:none;padding:0;margin:0 0 16px}
+li{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--ln);font-size:15px}
+li b{flex:0 0 22px;text-align:center}
+.s-ok b{color:var(--ok)}.s-warn b{color:var(--wa)}.s-bad b{color:var(--ba)}
+dl{margin:0;background:var(--sf);border:1px solid var(--ln);border-radius:10px;padding:4px 14px}
+dl div{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--ln)}
+dl div:last-child{border:0}
+dt{color:var(--mu);font-size:14px}dd{margin:0;font-weight:600;font-variant-numeric:tabular-nums;text-align:right}
+.foot{font-size:12px;color:var(--mu);margin-top:16px}
+</style>
+</head>
+<body>
+<main>
+<h1>Calculadora de riesgo</h1>
+<p class="sub">Mete tu operación y comprueba si cumple tus reglas: R:R mínimo de 1:2 y pérdida máxima de tu cuenta.</p>
+<div class="seg" role="group" aria-label="Dirección de la operación">
+<button type="button" id="b-short" aria-pressed="true">Corto</button>
+<button type="button" id="b-long" aria-pressed="false">Largo</button>
+</div>
+<div class="grid">
+<div><label for="entry">Entrada ($)</label><input id="entry" inputmode="decimal" value="81600"></div>
+<div><label for="stop">Stop ($)</label><input id="stop" inputmode="decimal" value="82300"></div>
+<div><label for="target">Objetivo ($)</label><input id="target" inputmode="decimal" value="80200"><p class="hint">Vacío: uso uno de 1:2</p></div>
+<div><label for="size">Tamaño de tu orden ($)</label><input id="size" inputmode="decimal" value="130"><p class="hint">Vacío: uso el recomendado</p></div>
+<div><label for="bal">Saldo de la cuenta ($)</label><input id="bal" inputmode="decimal" value="111,30"></div>
+<div><label for="rp">Riesgo por operación (%)</label><input id="rp" inputmode="decimal" value="1"></div>
+</div>
+<section id="out" aria-live="polite"></section>
+<p class="foot">Herramienta de cálculo, no es asesoramiento financiero. No incluye comisiones, funding ni slippage.</p>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const num=v=>{const n=parseFloat(String(v).replace(/\s/g,"").replace(",","."));return isFinite(n)?n:NaN};
+const f=(n,d=2)=>n.toLocaleString("es-ES",{minimumFractionDigits:d,maximumFractionDigits:d});
+let dir="short";
+function setDir(d){dir=d;$("b-short").setAttribute("aria-pressed",d==="short");$("b-long").setAttribute("aria-pressed",d==="long");calc()}
+function show(cls,title,msg,checks,rows){
+  let h='<div class="verdict '+cls+'"><h2>'+title+'</h2><p>'+msg+'</p></div>';
+  if(checks){h+='<ul>'+checks.map(c=>'<li class="s-'+c[0]+'"><b>'+({ok:"✓",warn:"!",bad:"✕"})[c[0]]+'</b><span>'+c[1]+'</span></li>').join("")+'</ul>'}
+  if(rows){h+='<dl>'+rows.map(r=>'<div><dt>'+r[0]+'</dt><dd>'+r[1]+'</dd></div>').join("")+'</dl>'}
+  $("out").innerHTML=h;
+}
+function calc(){
+  const e=num($("entry").value),s=num($("stop").value),t=num($("target").value),sz=num($("size").value),bal=num($("bal").value),rp=num($("rp").value);
+  if(!(e>0&&s>0&&bal>0&&rp>0)){show("v-warn","Faltan datos","Rellena entrada, stop, saldo y riesgo para ver el resultado.");return}
+  const g=dir==="short"?1:-1;
+  const risk=(s-e)*g;
+  if(risk<=0){show("v-bad","No válida",dir==="short"?"En un corto el stop va por encima de la entrada.":"En un largo el stop va por debajo de la entrada.");return}
+  const sugg=e-g*2*risk;
+  const hasT=t>0;
+  const reward=hasT?(e-t)*g:2*risk;
+  const rPct=risk/e,maxLoss=bal*rp/100,rec=maxLoss/rPct;
+  const order=sz>0?sz:rec;
+  const loss=order*rPct,gain=order*reward/e,lossPct=loss/bal*100,rr=reward/risk;
+  const c=[];
+  c.push(["ok","El stop está en el lado correcto."]);
+  if(hasT&&reward<=0)c.push(["bad","El objetivo está en el lado equivocado de la entrada."]);
+  else c.push(rr>=1.999?["ok","R:R de 1:"+f(rr,1)+". Cumple el mínimo de 1:2."]:["bad","R:R de 1:"+f(rr,1)+". Necesitas al menos 1:2: aleja el objetivo o acerca el stop."]);
+  if(lossPct<=rp+0.01)c.push(["ok","Arriesgas el "+f(lossPct)+"% de la cuenta, dentro de tu "+f(rp,1)+"%."]);
+  else if(lossPct<=2)c.push(["warn","Arriesgas el "+f(lossPct)+"%, por encima de tu "+f(rp,1)+"% pero dentro del tope del 2%. Tamaño recomendado: "+f(rec,0)+" $."]);
+  else c.push(["bad","Arriesgas el "+f(lossPct)+"% de la cuenta, por encima del tope del 2%. Reduce el tamaño a "+f(rec,0)+" $ o menos."]);
+  c.push(rPct<0.005?["warn","Stop a solo el "+f(rPct*100)+"% de la entrada: el ruido normal del mercado puede saltarlo."]:["ok","Stop al "+f(rPct*100)+"% de la entrada, con algo de holgura."]);
+  const bad=c.some(x=>x[0]==="bad"),warn=c.some(x=>x[0]==="warn");
+  const cls=bad?"v-bad":warn?"v-warn":"v-ok";
+  const title=bad?"No válida":warn?"Válida con avisos":"Válida";
+  const msg=bad?"Incumple al menos una de tus reglas.":warn?"Cumple tus reglas, pero revisa los avisos.":"Cumple todas tus reglas.";
+  show(cls,title,msg,c,[
+    ["Pérdida si salta el stop","-"+f(loss)+" $ ("+f(lossPct)+"%)"],
+    ["Ganancia en el objetivo","+"+f(gain)+" $"],
+    ["R:R","1:"+f(rr,1)],
+    ["Pérdida máxima ("+f(rp,1)+"%)",f(maxLoss)+" $"],
+    ["Tamaño recomendado",f(rec,0)+" $"],
+    ["Objetivo 1:2",f(sugg,0)+" $"],
+    ["Unidades que controlas",(order/e).toFixed(6)]
+  ]);
+}
+const KEY="calc-riesgo-v1";
+function save(){try{const o={dir};document.querySelectorAll("input").forEach(i=>o[i.id]=i.value);localStorage.setItem(KEY,JSON.stringify(o))}catch(e){}}
+try{const o=JSON.parse(localStorage.getItem(KEY)||"null");if(o){document.querySelectorAll("input").forEach(i=>{if(o[i.id]!=null)i.value=o[i.id]});if(o.dir)dir=o.dir;$("b-short").setAttribute("aria-pressed",dir==="short");$("b-long").setAttribute("aria-pressed",dir==="long")}}catch(e){}
+document.querySelectorAll("input").forEach(i=>i.addEventListener("input",()=>{calc();save()}));
+$("b-short").onclick=()=>{setDir("short");save()};
+$("b-long").onclick=()=>{setDir("long");save()};
+if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+calc();
+</script>
+</body>
+</html>
